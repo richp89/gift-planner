@@ -14,13 +14,11 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Gift Planner API")
 
 # CORS middleware - allow frontend origins
-allowed_origins_str = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:3000"
-)
-allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+# Temporarily hardcoded for debugging
+allowed_origins = ["https://gift-planner-89.vercel.app", "http://localhost:5173", "http://localhost:3000"]
 
-print(f"🔧 ALLOWED_ORIGINS: {allowed_origins}")  # Debug logging
+print(f"🔧 ALLOWED_ORIGINS from env: {os.getenv('ALLOWED_ORIGINS', 'NOT SET')}")
+print(f"🔧 ALLOWED_ORIGINS used: {allowed_origins}")  # Debug logging
 
 app.add_middleware(
     CORSMiddleware,

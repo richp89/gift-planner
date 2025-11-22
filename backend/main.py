@@ -48,6 +48,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+# Health check endpoint
+@app.get("/")
+def health_check():
+    return {"status": "healthy", "message": "Gift Planner API is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 # Auth endpoints
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):

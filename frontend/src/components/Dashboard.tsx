@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getEvents, createEvent, deleteEvent, logout, Event } from '../api';
-import { Plus, LogOut, Users, Calendar } from 'lucide-react';
+import { Plus, LogOut, Users } from 'lucide-react';
 
 interface DashboardProps {
   onLogout: () => void;

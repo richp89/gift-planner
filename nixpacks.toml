@@ -1,11 +1,8 @@
 [phases.setup]
-nixPkgs = ['python39']
+nixPkgs = ['python311', 'postgresql']
 
 [phases.install]
-cmds = ['pip install -r backend/requirements.txt']
-
-[phases.build]
-cmds = []
+cmds = ['cd backend && pip install -r requirements.txt']
 
 [start]
 cmd = 'cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT'

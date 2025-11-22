@@ -14,10 +14,13 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Gift Planner API")
 
 # CORS middleware - allow frontend origins
-allowed_origins = os.getenv(
+allowed_origins_str = os.getenv(
     "ALLOWED_ORIGINS",
     "http://localhost:5173,http://localhost:3000"
-).split(",")
+)
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
+print(f"🔧 ALLOWED_ORIGINS: {allowed_origins}")  # Debug logging
 
 app.add_middleware(
     CORSMiddleware,

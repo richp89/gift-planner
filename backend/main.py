@@ -7,15 +7,21 @@ import models
 import schemas
 import auth
 from database import SessionLocal, engine
+import os
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gift Planner API")
 
-# CORS middleware
+# CORS middleware - allow frontend origins
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

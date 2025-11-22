@@ -11,6 +11,8 @@ backend/.pytest_cache/
 backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
+backend/.env
+backend/.env.local
 
 # Frontend
 frontend/node_modules/

@@ -5,8 +5,9 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 import models
 import schemas
+import os
 
-SECRET_KEY = "your-secret-key-change-this-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 

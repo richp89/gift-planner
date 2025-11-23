@@ -247,12 +247,22 @@ def remove_recipient_from_event(event_id: int, recipient_id: int, db: Session = 
 # Gift endpoints
 @app.post("/recipients/{recipient_id}/gifts", response_model=schemas.Gift)
 def create_gift(recipient_id: int, gift: schemas.GiftCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # First try to find recipient in user's own events
     recipient = db.query(models.EventRecipient).join(models.Event).filter(
         models.EventRecipient.id == recipient_id,
         models.Event.user_id == current_user.id
     ).first()
+    
+    # If not found, check if event is shared with user with write or admin permission
     if not recipient:
-        raise HTTPException(status_code=404, detail="Recipient not found")
+        recipient = db.query(models.EventRecipient).join(models.Event).join(models.EventShare).filter(
+            models.EventRecipient.id == recipient_id,
+            models.EventShare.shared_with_user_id == current_user.id,
+            models.EventShare.permission.in_(["write", "admin"])
+        ).first()
+    
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found or you don't have permission")
     
     db_gift = models.Gift(**gift.dict(), event_recipient_id=recipient_id)
     db.add(db_gift)
@@ -274,12 +284,22 @@ def read_gifts(recipient_id: int, db: Session = Depends(get_db), current_user: m
 
 @app.put("/gifts/{gift_id}", response_model=schemas.Gift)
 def update_gift(gift_id: int, gift: schemas.GiftUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # First try user's own events
     db_gift = db.query(models.Gift).join(models.EventRecipient).join(models.Event).filter(
         models.Gift.id == gift_id,
         models.Event.user_id == current_user.id
     ).first()
+    
+    # If not found, check shared events with write/admin permission
     if not db_gift:
-        raise HTTPException(status_code=404, detail="Gift not found")
+        db_gift = db.query(models.Gift).join(models.EventRecipient).join(models.Event).join(models.EventShare).filter(
+            models.Gift.id == gift_id,
+            models.EventShare.shared_with_user_id == current_user.id,
+            models.EventShare.permission.in_(["write", "admin"])
+        ).first()
+    
+    if not db_gift:
+        raise HTTPException(status_code=404, detail="Gift not found or you don't have permission")
     
     for key, value in gift.dict(exclude_unset=True).items():
         setattr(db_gift, key, value)
@@ -289,12 +309,22 @@ def update_gift(gift_id: int, gift: schemas.GiftUpdate, db: Session = Depends(ge
 
 @app.delete("/gifts/{gift_id}")
 def delete_gift(gift_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # First try user's own events
     db_gift = db.query(models.Gift).join(models.EventRecipient).join(models.Event).filter(
         models.Gift.id == gift_id,
         models.Event.user_id == current_user.id
     ).first()
+    
+    # If not found, check shared events with admin permission (only admin can delete)
     if not db_gift:
-        raise HTTPException(status_code=404, detail="Gift not found")
+        db_gift = db.query(models.Gift).join(models.EventRecipient).join(models.Event).join(models.EventShare).filter(
+            models.Gift.id == gift_id,
+            models.EventShare.shared_with_user_id == current_user.id,
+            models.EventShare.permission == "admin"
+        ).first()
+    
+    if not db_gift:
+        raise HTTPException(status_code=404, detail="Gift not found or you don't have permission")
     
     db.delete(db_gift)
     db.commit()
@@ -435,7 +465,14 @@ def share_contact(contact_id: int, share: schemas.ContactShareCreate, db: Sessio
     return {"ok": True}
 
 @app.post("/contacts/share/bulk")
-def share_contacts_bulk(contact_ids: List[int], shared_with_user_id: int, permission: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def share_contacts_bulk(share_data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    contact_ids = share_data.get("contact_ids", [])
+    shared_with_user_id = share_data.get("shared_with_user_id")
+    permission = share_data.get("permission", "read")
+    
+    if not contact_ids or not shared_with_user_id:
+        raise HTTPException(status_code=400, detail="contact_ids and shared_with_user_id are required")
+    
     # Check if they're friends
     is_friend = db.query(models.FriendRequest).filter(
         ((models.FriendRequest.from_user_id == current_user.id) & (models.FriendRequest.to_user_id == shared_with_user_id)) |

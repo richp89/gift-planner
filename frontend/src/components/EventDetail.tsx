@@ -577,6 +577,11 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
                   className="form-input"
                   value={newGift.amount}
                   onChange={(e) => setNewGift({ ...newGift, amount: Number(e.target.value) })}
+                  onFocus={(e) => {
+                    if (e.target.value === '0') {
+                      e.target.select();
+                    }
+                  }}
                   required
                   min="0"
                   step="0.01"

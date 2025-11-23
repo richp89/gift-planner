@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from models import PermissionLevel, FriendRequestStatus
 
 class Token(BaseModel):
     access_token: str
@@ -105,6 +106,75 @@ class EventRecipientDetail(EventRecipient):
 
 class EventDetail(Event):
     recipients: List[EventRecipientDetail] = []
+
+    class Config:
+        from_attributes = True
+
+# Friend and Sharing Schemas
+
+class FriendRequestCreate(BaseModel):
+    to_username: str
+
+class FriendRequest(BaseModel):
+    id: int
+    from_user_id: int
+    to_user_id: int
+    status: str
+    from_user: User
+    to_user: User
+
+    class Config:
+        from_attributes = True
+
+class FriendInfo(BaseModel):
+    id: int
+    username: str
+    email: str
+    full_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ContactShareCreate(BaseModel):
+    contact_id: int
+    shared_with_user_id: int
+    permission: str = PermissionLevel.READ.value
+
+class ContactShare(BaseModel):
+    id: int
+    contact_id: int
+    shared_with_user_id: int
+    permission: str
+    shared_with: User
+
+    class Config:
+        from_attributes = True
+
+class ContactWithShares(Contact):
+    shares: List[ContactShare] = []
+    is_owner: bool = True
+
+    class Config:
+        from_attributes = True
+
+class EventShareCreate(BaseModel):
+    event_id: int
+    shared_with_user_id: int
+    permission: str = PermissionLevel.READ.value
+
+class EventShare(BaseModel):
+    id: int
+    event_id: int
+    shared_with_user_id: int
+    permission: str
+    shared_with: User
+
+    class Config:
+        from_attributes = True
+
+class EventWithShares(Event):
+    shares: List[EventShare] = []
+    is_owner: bool = True
 
     class Config:
         from_attributes = True

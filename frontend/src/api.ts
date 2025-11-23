@@ -63,6 +63,38 @@ export interface EventDetail extends Event {
   recipients: EventRecipient[];
 }
 
+export interface FriendRequest {
+  id: number;
+  from_user_id: number;
+  to_user_id: number;
+  status: string;
+  from_user: User;
+  to_user: User;
+}
+
+export interface Friend {
+  id: number;
+  username: string;
+  email: string;
+  full_name?: string;
+}
+
+export interface ContactShare {
+  id: number;
+  contact_id: number;
+  shared_with_user_id: number;
+  permission: string;
+  shared_with: User;
+}
+
+export interface EventShare {
+  id: number;
+  event_id: number;
+  shared_with_user_id: number;
+  permission: string;
+  shared_with: User;
+}
+
 // Auth
 export const register = async (username: string, email: string, password: string, full_name?: string) => {
   const response = await api.post<User>('/register', { username, email, password, full_name });
@@ -173,6 +205,56 @@ export const updateGift = async (giftId: number, gift: Partial<Omit<Gift, 'id' |
 
 export const deleteGift = async (giftId: number) => {
   await api.delete(`/gifts/${giftId}`);
+};
+
+// Friends
+export const sendFriendRequest = async (toUsername: string) => {
+  const response = await api.post<FriendRequest>('/friends/request', { to_username: toUsername });
+  return response.data;
+};
+
+export const getFriendRequests = async () => {
+  const response = await api.get<FriendRequest[]>('/friends/requests');
+  return response.data;
+};
+
+export const acceptFriendRequest = async (requestId: number) => {
+  await api.post(`/friends/requests/${requestId}/accept`);
+};
+
+export const rejectFriendRequest = async (requestId: number) => {
+  await api.post(`/friends/requests/${requestId}/reject`);
+};
+
+export const getFriends = async () => {
+  const response = await api.get<Friend[]>('/friends');
+  return response.data;
+};
+
+// Contact Sharing
+export const shareContact = async (contactId: number, sharedWithUserId: number, permission: string = 'read') => {
+  await api.post(`/contacts/${contactId}/share`, {
+    contact_id: contactId,
+    shared_with_user_id: sharedWithUserId,
+    permission,
+  });
+};
+
+export const unshareContact = async (contactId: number, userId: number) => {
+  await api.delete(`/contacts/${contactId}/share/${userId}`);
+};
+
+// Event Sharing
+export const shareEvent = async (eventId: number, sharedWithUserId: number, permission: string = 'read') => {
+  await api.post(`/events/${eventId}/share`, {
+    event_id: eventId,
+    shared_with_user_id: sharedWithUserId,
+    permission,
+  });
+};
+
+export const unshareEvent = async (eventId: number, userId: number) => {
+  await api.delete(`/events/${eventId}/share/${userId}`);
 };
 
 export default api;

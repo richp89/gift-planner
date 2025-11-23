@@ -10,7 +10,7 @@ import {
   Friend,
   FriendRequest as FriendRequestType,
 } from '../api';
-import { ArrowLeft, LogOut, Plus, Check, X, UserPlus } from 'lucide-react';
+import { ArrowLeft, LogOut, Check, X, UserPlus } from 'lucide-react';
 
 interface FriendsProps {
   onLogout: () => void;

@@ -9,7 +9,6 @@ import {
   Contact,
   getFriends,
   shareContact,
-  unshareContact,
   Friend,
   getCurrentUser,
   User,

@@ -390,7 +390,22 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
             </div>
             <form onSubmit={handleAddRecipients}>
               <div className="form-group">
-                <label>Select Contacts</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label>Select Contacts</label>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-secondary"
+                    onClick={() => {
+                      if (selectedContactIds.length === availableContacts.length) {
+                        setSelectedContactIds([]);
+                      } else {
+                        setSelectedContactIds(availableContacts.map((c) => c.id));
+                      }
+                    }}
+                  >
+                    {selectedContactIds.length === availableContacts.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
                 <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem' }}>
                   {availableContacts.map((contact) => (
                     <div key={contact.id} style={{ padding: '0.25rem' }}>

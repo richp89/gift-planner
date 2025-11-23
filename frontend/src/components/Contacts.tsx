@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getContacts, createContact, updateContact, deleteContact, logout, Contact } from '../api';
-import { Plus, ArrowLeft, LogOut, Trash2, Edit } from 'lucide-react';
+import { 
+  getContacts, 
+  createContact, 
+  updateContact, 
+  deleteContact, 
+  logout, 
+  Contact,
+  getFriends,
+  shareContact,
+  unshareContact,
+  Friend,
+  getCurrentUser,
+  User,
+} from '../api';
+import { Plus, ArrowLeft, LogOut, Trash2, Edit, Share2 } from 'lucide-react';
 
 interface ContactsProps {
   onLogout: () => void;
@@ -19,10 +32,36 @@ export default function Contacts({ onLogout }: ContactsProps) {
     notes: '',
   });
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharingContact, setSharingContact] = useState<Contact | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedFriendId, setSelectedFriendId] = useState<number>(0);
+  const [sharePermission, setSharePermission] = useState<string>('read');
 
   useEffect(() => {
     loadContacts();
+    loadFriends();
+    loadCurrentUser();
   }, []);
+
+  const loadFriends = async () => {
+    try {
+      const data = await getFriends();
+      setFriends(data);
+    } catch (error) {
+      console.error('Failed to load friends:', error);
+    }
+  };
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+    }
+  };
 
   const loadContacts = async () => {
     try {
@@ -77,6 +116,27 @@ export default function Contacts({ onLogout }: ContactsProps) {
   const handleLogout = () => {
     logout();
     onLogout();
+  };
+
+  const handleOpenShare = (contact: Contact) => {
+    setSharingContact(contact);
+    setShowShareModal(true);
+    setSelectedFriendId(0);
+    setSharePermission('read');
+  };
+
+  const handleShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sharingContact || !selectedFriendId) return;
+    
+    try {
+      await shareContact(sharingContact.id, selectedFriendId, sharePermission);
+      setShowShareModal(false);
+      setSharingContact(null);
+      alert('Contact shared successfully!');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to share contact');
+    }
   };
 
   if (loading) {
@@ -134,12 +194,19 @@ export default function Contacts({ onLogout }: ContactsProps) {
                     <td>{contact.notes || '-'}</td>
                     <td>
                       <div className="action-buttons">
+                        {currentUser && contact.user_id === currentUser.id && (
+                          <button className="btn btn-small btn-secondary" onClick={() => handleOpenShare(contact)}>
+                            <Share2 size={14} />
+                          </button>
+                        )}
                         <button className="btn btn-small btn-secondary" onClick={() => handleEdit(contact)}>
                           <Edit size={14} />
                         </button>
-                        <button className="btn btn-small btn-danger" onClick={() => handleDelete(contact.id)}>
-                          <Trash2 size={14} />
-                        </button>
+                        {currentUser && contact.user_id === currentUser.id && (
+                          <button className="btn btn-small btn-danger" onClick={() => handleDelete(contact.id)}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -205,6 +272,55 @@ export default function Contacts({ onLogout }: ContactsProps) {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   {editingContact ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showShareModal && sharingContact && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Share Contact: {sharingContact.name}</h2>
+              <button onClick={() => setShowShareModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleShare}>
+              <div className="form-group">
+                <label>Share with Friend</label>
+                <select
+                  className="form-input"
+                  value={selectedFriendId}
+                  onChange={(e) => setSelectedFriendId(Number(e.target.value))}
+                  required
+                >
+                  <option value={0}>Select a friend...</option>
+                  {friends.map((friend) => (
+                    <option key={friend.id} value={friend.id}>
+                      {friend.username} ({friend.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Permission Level</label>
+                <select
+                  className="form-input"
+                  value={sharePermission}
+                  onChange={(e) => setSharePermission(e.target.value)}
+                >
+                  <option value="read">Read Only</option>
+                  <option value="write">Can Edit</option>
+                  <option value="admin">Admin (Can Delete & Manage Sharing)</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowShareModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={!selectedFriendId}>
+                  Share
                 </button>
               </div>
             </form>

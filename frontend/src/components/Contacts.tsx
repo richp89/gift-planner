@@ -9,6 +9,7 @@ import {
   Contact,
   getFriends,
   shareContact,
+  shareContactsBulk,
   Friend,
   getCurrentUser,
   User,
@@ -32,6 +33,8 @@ export default function Contacts({ onLogout }: ContactsProps) {
   });
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showBulkShareModal, setShowBulkShareModal] = useState(false);
+  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
   const [sharingContact, setSharingContact] = useState<Contact | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -138,6 +141,46 @@ export default function Contacts({ onLogout }: ContactsProps) {
     }
   };
 
+  const handleToggleContactSelection = (contactId: number) => {
+    setSelectedContactIds((prev) =>
+      prev.includes(contactId)
+        ? prev.filter((id) => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
+
+  const handleSelectAllContacts = () => {
+    if (selectedContactIds.length === contacts.length) {
+      setSelectedContactIds([]);
+    } else {
+      setSelectedContactIds(contacts.map((c) => c.id));
+    }
+  };
+
+  const handleOpenBulkShare = () => {
+    if (selectedContactIds.length === 0) {
+      alert('Please select at least one contact to share');
+      return;
+    }
+    setShowBulkShareModal(true);
+    setSelectedFriendId(0);
+    setSharePermission('read');
+  };
+
+  const handleBulkShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFriendId || selectedContactIds.length === 0) return;
+    
+    try {
+      await shareContactsBulk(selectedContactIds, selectedFriendId, sharePermission);
+      setShowBulkShareModal(false);
+      setSelectedContactIds([]);
+      alert(`Successfully shared ${selectedContactIds.length} contacts!`);
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to share contacts');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -163,9 +206,26 @@ export default function Contacts({ onLogout }: ContactsProps) {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>All Contacts</h2>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <Plus size={16} /> Add Contact
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {selectedContactIds.length > 0 && (
+              <>
+                <button className="btn btn-secondary" onClick={handleSelectAllContacts}>
+                  {selectedContactIds.length === contacts.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <button className="btn btn-primary" onClick={handleOpenBulkShare}>
+                  <Share2 size={16} /> Share ({selectedContactIds.length})
+                </button>
+              </>
+            )}
+            {selectedContactIds.length === 0 && (
+              <button className="btn btn-secondary" onClick={handleSelectAllContacts}>
+                Select All
+              </button>
+            )}
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              <Plus size={16} /> Add Contact
+            </button>
+          </div>
         </div>
 
         {contacts.length === 0 ? (
@@ -177,6 +237,14 @@ export default function Contacts({ onLogout }: ContactsProps) {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedContactIds.length === contacts.length && contacts.length > 0}
+                      onChange={handleSelectAllContacts}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
                   <th>Name</th>
                   <th>Email</th>
                   <th>Phone</th>
@@ -187,6 +255,14 @@ export default function Contacts({ onLogout }: ContactsProps) {
               <tbody>
                 {contacts.map((contact) => (
                   <tr key={contact.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedContactIds.includes(contact.id)}
+                        onChange={() => handleToggleContactSelection(contact.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
                     <td style={{ fontWeight: 600 }}>{contact.name}</td>
                     <td>{contact.email || '-'}</td>
                     <td>{contact.phone || '-'}</td>
@@ -320,6 +396,55 @@ export default function Contacts({ onLogout }: ContactsProps) {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={!selectedFriendId}>
                   Share
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBulkShareModal && (
+        <div className="modal-overlay" onClick={() => setShowBulkShareModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Share {selectedContactIds.length} Contact{selectedContactIds.length !== 1 ? 's' : ''}</h2>
+              <button onClick={() => setShowBulkShareModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleBulkShare}>
+              <div className="form-group">
+                <label>Share with Friend</label>
+                <select
+                  className="form-input"
+                  value={selectedFriendId}
+                  onChange={(e) => setSelectedFriendId(Number(e.target.value))}
+                  required
+                >
+                  <option value={0}>Select a friend...</option>
+                  {friends.map((friend) => (
+                    <option key={friend.id} value={friend.id}>
+                      {friend.username} ({friend.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Permission Level</label>
+                <select
+                  className="form-input"
+                  value={sharePermission}
+                  onChange={(e) => setSharePermission(e.target.value)}
+                >
+                  <option value="read">Read Only</option>
+                  <option value="write">Can Edit</option>
+                  <option value="admin">Admin (Can Delete & Manage Sharing)</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowBulkShareModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={!selectedFriendId}>
+                  Share All
                 </button>
               </div>
             </form>

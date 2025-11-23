@@ -231,6 +231,11 @@ export const getFriends = async () => {
   return response.data;
 };
 
+export const searchUsers = async (query: string) => {
+  const response = await api.get<Friend[]>('/users/search', { params: { q: query } });
+  return response.data;
+};
+
 // Contact Sharing
 export const shareContact = async (contactId: number, sharedWithUserId: number, permission: string = 'read') => {
   await api.post(`/contacts/${contactId}/share`, {
@@ -242,6 +247,15 @@ export const shareContact = async (contactId: number, sharedWithUserId: number, 
 
 export const unshareContact = async (contactId: number, userId: number) => {
   await api.delete(`/contacts/${contactId}/share/${userId}`);
+};
+
+export const shareContactsBulk = async (contactIds: number[], sharedWithUserId: number, permission: string = 'read') => {
+  const response = await api.post('/contacts/share/bulk', {
+    contact_ids: contactIds,
+    shared_with_user_id: sharedWithUserId,
+    permission,
+  });
+  return response.data;
 };
 
 // Event Sharing

@@ -6,6 +6,7 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  searchUsers,
   logout,
   Friend,
   FriendRequest as FriendRequestType,
@@ -23,6 +24,8 @@ export default function Friends({ onLogout }: FriendsProps) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newFriendUsername, setNewFriendUsername] = useState('');
+  const [searchResults, setSearchResults] = useState<Friend[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -50,11 +53,36 @@ export default function Friends({ onLogout }: FriendsProps) {
     try {
       await sendFriendRequest(newFriendUsername);
       setNewFriendUsername('');
+      setSearchResults([]);
+      setShowSuggestions(false);
       setShowAddModal(false);
       loadData();
     } catch (error: any) {
       setError(error.response?.data?.detail || 'Failed to send friend request');
     }
+  };
+
+  const handleUsernameChange = async (value: string) => {
+    setNewFriendUsername(value);
+    
+    if (value.length >= 2) {
+      try {
+        const results = await searchUsers(value);
+        setSearchResults(results);
+        setShowSuggestions(results.length > 0);
+      } catch (error) {
+        console.error('Failed to search users:', error);
+      }
+    } else {
+      setSearchResults([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectUser = (username: string) => {
+    setNewFriendUsername(username);
+    setShowSuggestions(false);
+    setSearchResults([]);
   };
 
   const handleAccept = async (requestId: number) => {
@@ -190,16 +218,55 @@ export default function Friends({ onLogout }: FriendsProps) {
               <button onClick={() => setShowAddModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSendRequest}>
-              <div className="form-group">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <label>Friend's Username</label>
                 <input
                   type="text"
                   className="form-input"
                   value={newFriendUsername}
-                  onChange={(e) => setNewFriendUsername(e.target.value)}
-                  placeholder="Enter username"
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  placeholder="Start typing username..."
                   required
                 />
+                {showSuggestions && searchResults.length > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.375rem',
+                      marginTop: '0.25rem',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      zIndex: 10,
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    }}
+                  >
+                    {searchResults.map((user) => (
+                      <div
+                        key={user.id}
+                        onClick={() => handleSelectUser(user.username)}
+                        style={{
+                          padding: '0.75rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f3f4f6',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      >
+                        <div style={{ fontWeight: 500 }}>{user.username}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{user.email}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               {error && (
                 <div style={{ color: '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>

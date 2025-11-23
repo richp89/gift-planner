@@ -301,6 +301,19 @@ def delete_gift(gift_id: int, db: Session = Depends(get_db), current_user: model
     return {"ok": True}
 
 # Friend endpoints
+@app.get("/users/search", response_model=List[schemas.FriendInfo])
+def search_users(q: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if len(q) < 2:
+        return []
+    
+    # Search for users matching the query, exclude current user
+    users = db.query(models.User).filter(
+        models.User.username.ilike(f"%{q}%"),
+        models.User.id != current_user.id
+    ).limit(10).all()
+    
+    return users
+
 @app.post("/friends/request", response_model=schemas.FriendRequest)
 def send_friend_request(request: schemas.FriendRequestCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Find the user to send request to
@@ -420,6 +433,51 @@ def share_contact(contact_id: int, share: schemas.ContactShareCreate, db: Sessio
     db.add(db_share)
     db.commit()
     return {"ok": True}
+
+@app.post("/contacts/share/bulk")
+def share_contacts_bulk(contact_ids: List[int], shared_with_user_id: int, permission: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Check if they're friends
+    is_friend = db.query(models.FriendRequest).filter(
+        ((models.FriendRequest.from_user_id == current_user.id) & (models.FriendRequest.to_user_id == shared_with_user_id)) |
+        ((models.FriendRequest.from_user_id == shared_with_user_id) & (models.FriendRequest.to_user_id == current_user.id)),
+        models.FriendRequest.status == "accepted"
+    ).first()
+    
+    if not is_friend:
+        raise HTTPException(status_code=400, detail="Can only share with friends")
+    
+    shared_count = 0
+    for contact_id in contact_ids:
+        contact = db.query(models.Contact).filter(
+            models.Contact.id == contact_id,
+            models.Contact.user_id == current_user.id
+        ).first()
+        
+        if not contact:
+            continue
+        
+        # Check if already shared
+        existing = db.query(models.ContactShare).filter(
+            models.ContactShare.contact_id == contact_id,
+            models.ContactShare.shared_with_user_id == shared_with_user_id
+        ).first()
+        
+        if existing:
+            # Update permission
+            existing.permission = permission
+        else:
+            # Create new share
+            db_share = models.ContactShare(
+                contact_id=contact_id,
+                shared_with_user_id=shared_with_user_id,
+                permission=permission
+            )
+            db.add(db_share)
+        
+        shared_count += 1
+    
+    db.commit()
+    return {"ok": True, "shared_count": shared_count}
 
 @app.delete("/contacts/{contact_id}/share/{user_id}")
 def unshare_contact(contact_id: int, user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

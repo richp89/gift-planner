@@ -4,6 +4,7 @@ import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import EventDetail from './components/EventDetail';
 import Contacts from './components/Contacts';
+import Friends from './components/Friends';
 import { getCurrentUser } from './api';
 
 function App() {
@@ -53,6 +54,10 @@ function App() {
         <Route
           path="/contacts"
           element={isAuthenticated ? <Contacts onLogout={() => setIsAuthenticated(false)} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/friends"
+          element={isAuthenticated ? <Friends onLogout={() => setIsAuthenticated(false)} /> : <Navigate to="/login" />}
         />
       </Routes>
     </Router>

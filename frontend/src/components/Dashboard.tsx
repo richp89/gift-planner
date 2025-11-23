@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getEvents, createEvent, deleteEvent, logout, Event } from '../api';
-import { Plus, LogOut, Users } from 'lucide-react';
+import { Plus, LogOut, Users, UserPlus } from 'lucide-react';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -70,6 +70,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       <div className="header">
         <h1>🎁 Gift Planner</h1>
         <div className="header-actions">
+          <button className="btn btn-secondary" onClick={() => navigate('/friends')}>
+            <UserPlus size={16} /> Friends
+          </button>
           <button className="btn btn-secondary" onClick={() => navigate('/contacts')}>
             <Users size={16} /> Contacts
           </button>

@@ -235,7 +235,46 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
             No recipients yet. Add people to start tracking gifts!
           </p>
         ) : (
-          <div className="table-container">
+          <>
+            <div style={{ 
+              display: 'flex', 
+              gap: '2rem', 
+              padding: '1rem', 
+              backgroundColor: '#f9fafb', 
+              borderRadius: '0.5rem',
+              marginBottom: '1rem',
+              justifyContent: 'center'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                  Total Budget
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937' }}>
+                  ${event.recipients.reduce((sum, r) => sum + r.budget_limit, 0).toFixed(2)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                  Total Spent
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937' }}>
+                  ${event.recipients.reduce((sum, r) => sum + calculateSpent(r), 0).toFixed(2)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                  Remaining
+                </div>
+                <div style={{ 
+                  fontSize: '1.5rem', 
+                  fontWeight: 700,
+                  color: event.recipients.reduce((sum, r) => sum + calculateRemaining(r), 0) < 0 ? '#ef4444' : '#059669'
+                }}>
+                  ${event.recipients.reduce((sum, r) => sum + calculateRemaining(r), 0).toFixed(2)}
+                </div>
+              </div>
+            </div>
+            <div className="table-container">
             <table className="data-table">
               <thead>
                 <tr>
@@ -378,6 +417,7 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

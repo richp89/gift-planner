@@ -14,8 +14,13 @@ import {
   Contact,
   EventRecipient,
   Gift,
+  getFriends,
+  shareEvent,
+  Friend,
+  getCurrentUser,
+  User,
 } from '../api';
-import { Plus, ArrowLeft, LogOut, Trash2, Edit, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, ArrowLeft, LogOut, Trash2, Edit, ChevronDown, ChevronRight, Share2 } from 'lucide-react';
 
 interface EventDetailProps {
   onLogout: () => void;
@@ -43,10 +48,35 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
     purchased: false,
     url: '',
   });
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedFriendId, setSelectedFriendId] = useState<number>(0);
+  const [sharePermission, setSharePermission] = useState<string>('read');
 
   useEffect(() => {
     loadData();
+    loadFriends();
+    loadCurrentUser();
   }, [id]);
+
+  const loadFriends = async () => {
+    try {
+      const data = await getFriends();
+      setFriends(data);
+    } catch (error) {
+      console.error('Failed to load friends:', error);
+    }
+  };
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -185,6 +215,20 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
     }
   };
 
+  const handleShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFriendId || !event) return;
+    
+    try {
+      await shareEvent(event.id, selectedFriendId, sharePermission);
+      setShowShareModal(false);
+      setSelectedFriendId(0);
+      alert('Event shared successfully!');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to share event');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -210,9 +254,16 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
           </button>
           <h1>🎁 {event.name}</h1>
         </div>
-        <button className="btn btn-secondary" onClick={handleLogout}>
-          <LogOut size={16} /> Logout
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {currentUser && event.user_id === currentUser.id && (
+            <button className="btn btn-secondary" onClick={() => setShowShareModal(true)}>
+              <Share2 size={16} /> Share
+            </button>
+          )}
+          <button className="btn btn-secondary" onClick={handleLogout}>
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -557,6 +608,55 @@ export default function EventDetail({ onLogout }: EventDetailProps) {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   {currentGift ? 'Update' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Share Event</h2>
+              <button onClick={() => setShowShareModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleShare}>
+              <div className="form-group">
+                <label>Share with Friend</label>
+                <select
+                  className="form-input"
+                  value={selectedFriendId}
+                  onChange={(e) => setSelectedFriendId(Number(e.target.value))}
+                  required
+                >
+                  <option value={0}>Select a friend...</option>
+                  {friends.map((friend) => (
+                    <option key={friend.id} value={friend.id}>
+                      {friend.username} ({friend.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Permission Level</label>
+                <select
+                  className="form-input"
+                  value={sharePermission}
+                  onChange={(e) => setSharePermission(e.target.value)}
+                >
+                  <option value="read">Read Only</option>
+                  <option value="write">Can Edit</option>
+                  <option value="admin">Admin (Can Delete & Manage Sharing)</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowShareModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={!selectedFriendId}>
+                  Share
                 </button>
               </div>
             </form>
